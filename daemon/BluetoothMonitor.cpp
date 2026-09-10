@@ -56,6 +56,8 @@ bool BluetoothMonitor::isAirPodsDevice(const QString &devicePath)
     QDBusInterface deviceInterface("org.bluez", devicePath, "org.freedesktop.DBus.Properties", m_dbus);
     QDBusReply<QVariant> uuidsReply = deviceInterface.call("Get", "org.bluez.Device1", "UUIDs");
     if (!uuidsReply.isValid()) {
+        LOG_WARN("BlueZ UUID query failed for " << devicePath << ": "
+                                                << uuidsReply.error().message());
         return false;
     }
     QStringList uuids = uuidsReply.value().toStringList();
@@ -193,6 +195,7 @@ void BluetoothMonitor::onPropertiesChanged(const QDBusMessage &message)
     QDBusInterface deviceInterface("org.bluez", path, "org.freedesktop.DBus.Properties", m_dbus);
     QDBusReply<QVariant> addrReply = deviceInterface.call("Get", "org.bluez.Device1", "Address");
     if (!addrReply.isValid()) {
+        LOG_WARN("BlueZ Address query failed for " << path << ": " << addrReply.error().message());
         return;
     }
 
