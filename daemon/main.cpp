@@ -925,9 +925,9 @@ private slots:
 
         // A pair BlueZ already holds emits no transition here, so only a sweep can find it.
         if (ControlReconnect::shouldRescanFromWatchdog(
-                areAirpodsConnected(), m_controlRecovery.isActive(), m_isSuspending)
-            && monitor->checkAlreadyConnectedDevices()) {
-            LOG_INFO("Control link watchdog: swept up AirPods that no BlueZ signal announced");
+                areAirpodsConnected(), m_controlRecovery.isActive(), m_isSuspending)) {
+            monitor->checkAlreadyConnectedDevices(
+                QStringLiteral("Control link watchdog: swept up AirPods that no BlueZ signal announced"));
         }
     }
 

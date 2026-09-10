@@ -74,14 +74,33 @@ QString BluetoothMonitor::getDeviceName(const QString &devicePath)
     return "Unknown";
 }
 
-bool BluetoothMonitor::checkAlreadyConnectedDevices()
+void BluetoothMonitor::checkAlreadyConnectedDevices(const QString &logOnFound)
 {
+    // A blocking call would stall the event loop for the whole timeout against a wedged
+    // bluetoothd, and the watchdog repeats this every 30 s while the control link is down.
+    if (m_sweepInFlight) {
+        return;
+    }
+
     // QDBusInterface introspects the remote object from its constructor on the default 25 s
     // timeout, so setTimeout on the interface cannot bound this. Build the call directly.
     QDBusMessage request = QDBusMessage::createMethodCall(
         "org.bluez", "/", "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
-    QDBusMessage reply = m_dbus.call(request, QDBus::Block, sweepTimeoutMs);
+    auto *watcher = new QDBusPendingCallWatcher(m_dbus.asyncCall(request, sweepTimeoutMs), this);
+    m_sweepInFlight = true;
 
+    connect(watcher, &QDBusPendingCallWatcher::finished, this,
+            [this, logOnFound](QDBusPendingCallWatcher *call) {
+                m_sweepInFlight = false;
+                call->deleteLater();
+                if (consumeSweepReply(call->reply()) && !logOnFound.isEmpty()) {
+                    LOG_INFO(qUtf8Printable(logOnFound));
+                }
+            });
+}
+
+bool BluetoothMonitor::consumeSweepReply(const QDBusMessage &reply)
+{
     if (reply.type() == QDBusMessage::ErrorMessage)
     {
         // Keyed on the name as well, since an error reply carrying no string reads empty.
